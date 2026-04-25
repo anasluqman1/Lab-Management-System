@@ -1,35 +1,48 @@
 <?php
+// 🔴 SHOW ERRORS (remove later in production if you want)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 session_start();
 
-// Use Railway environment variables instead of localhost
-define('DB_HOST', getenv('MYSQLHOST'));
-define('DB_NAME', getenv('MYSQLDATABASE'));
-define('DB_USER', getenv('MYSQLUSER'));
-define('DB_PASS', getenv('MYSQLPASSWORD'));
-define('DB_PORT', getenv('MYSQLPORT'));
+// ================= DATABASE CONFIG =================
+
+// Railway environment variables
+define('DB_HOST', getenv('MYSQLHOST') ?: 'localhost');
+define('DB_NAME', getenv('MYSQLDATABASE') ?: 'lab_system');
+define('DB_USER', getenv('MYSQLUSER') ?: 'root');
+define('DB_PASS', getenv('MYSQLPASSWORD') ?: '');
+define('DB_PORT', getenv('MYSQLPORT') ?: '3306');
 define('DB_CHARSET', 'utf8mb4');
 
-// Update this AFTER deployment (put your Railway URL)
+// ================= APP CONFIG =================
+
 define('APP_NAME', 'KOYA LAB');
 define('APP_VERSION', '2.9.1');
-define('BASE_URL', getenv('APP_URL') ?: 'http://localhost');
+
+// Auto-detect URL (works on Railway)
+define('BASE_URL', getenv('APP_URL') ?: (
+    (isset($_SERVER['HTTPS']) ? "https" : "http") . "://" . $_SERVER['HTTP_HOST']
+));
+
+// ================= DATABASE CONNECTION =================
 
 try {
     $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
 
-    $opts = [
+    $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ];
 
-    $pdo = new PDO($dsn, DB_USER, DB_PASS, $opts);
+    $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
 
 } catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
+    die("❌ Database connection failed: " . $e->getMessage());
 }
 
-// ===== YOUR ORIGINAL FUNCTIONS (UNCHANGED) =====
+// ================= HELPER FUNCTIONS =================
 
 function sanitize($data)
 {
@@ -90,6 +103,8 @@ function formatDateTime($datetime)
     return date('M d, Y h:i A', strtotime($datetime));
 }
 
+// ================= NOTIFICATIONS =================
+
 function getUnreadNotificationCount($pdo, $userId)
 {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
@@ -106,6 +121,7 @@ function createNotification($pdo, $userId, $type, $title, $message, $link = null
 function broadcastNotification($pdo, $roles, $type, $title, $message, $link = null)
 {
     $placeholders = str_repeat('?,', count($roles) - 1) . '?';
+
     $stmt = $pdo->prepare("SELECT id FROM users WHERE role IN ($placeholders) AND is_active = 1");
     $stmt->execute($roles);
     $users = $stmt->fetchAll();
