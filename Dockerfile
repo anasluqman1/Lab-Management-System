@@ -1,22 +1,13 @@
-FROM php:8.2-apache
+FROM php:8.2-cli
 
-# Install Apache + PHP module properly
-RUN apt-get update && apt-get install -y apache2
-
-# Disable conflicting MPMs and enable prefork ONLY
-RUN a2dismod mpm_event mpm_worker || true
-RUN a2enmod mpm_prefork
-
-# Install PHP MySQL extensions
+# Install MySQL extensions
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 
-# Enable rewrite
-RUN a2enmod rewrite
+# Set working directory
+WORKDIR /app
 
-# Copy project files
-COPY . /var/www/html/
+# Copy files
+COPY . .
 
-# Fix permissions (important sometimes)
-RUN chown -R www-data:www-data /var/www/html
-
-EXPOSE 80
+# Start PHP built-in server
+CMD php -S 0.0.0.0:80 -t /app
