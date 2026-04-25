@@ -1,0 +1,3 @@
+1- add more tests to the test catalog
+2-make it so the user can add new tests to the system and save them to the database
+3-adjusting the price of the tests
